@@ -6,82 +6,57 @@ from matplotlib import pyplot
 import numpy as np
 from tensorflow.image import resize
 
-#Function
 @st.cache_resource()
 def load_model():
-  model = tf.keras.models.load_model("Trained_model.keras")
-  return model
+    model = tf.keras.models.load_model("Trained_model.keras")
+    return model
 
-
-# Load and preprocess audio data
 def load_and_preprocess_data(file_path, target_shape=(150, 150)):
     data = []
     audio_data, sample_rate = librosa.load(file_path, sr=None)
-    # Perform preprocessing (e.g., convert to Mel spectrogram and resize)
-    # Define the duration of each chunk and overlap
-    chunk_duration = 4  # seconds
-    overlap_duration = 2  # seconds
-                
-    # Convert durations to samples
+    chunk_duration = 4
+    overlap_duration = 2
     chunk_samples = chunk_duration * sample_rate
     overlap_samples = overlap_duration * sample_rate
-                
-    # Calculate the number of chunks
     num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
-                
-    # Iterate over each chunk
+
     for i in range(num_chunks):
-                    # Calculate start and end indices of the chunk
         start = i * (chunk_samples - overlap_samples)
         end = start + chunk_samples
-                    
-                    # Extract the chunk of audio
         chunk = audio_data[start:end]
-                    
-                    # Compute the Mel spectrogram for the chunk
         mel_spectrogram = librosa.feature.melspectrogram(y=chunk, sr=sample_rate)
-                    
-                #mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sample_rate)
         mel_spectrogram = resize(np.expand_dims(mel_spectrogram, axis=-1), target_shape)
         data.append(mel_spectrogram)
     
     return np.array(data)
 
-
-
-#Tensorflow Model Prediction
 def model_prediction(X_test):
     model = load_model()
     y_pred = model.predict(X_test)
-    predicted_categories = np.argmax(y_pred,axis=1)
+    predicted_categories = np.argmax(y_pred, axis=1)
     unique_elements, counts = np.unique(predicted_categories, return_counts=True)
-    #print(unique_elements, counts)
     max_count = np.max(counts)
     max_elements = unique_elements[counts == max_count]
     return max_elements[0]
 
-
-
-#sidebar
 st.sidebar.title("Dashboard")
-app_mode = st.sidebar.selectbox("Select Page",["Home","About Project","Prediction"])
+app_mode = st.sidebar.selectbox("Select Page", ["Home", "About Project", "Prediction"])
 
-## Main Page
 if(app_mode=="Home"):
     st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #181646;  /* Blue background */
-        color: white;
-    }
-    h2, h3 {
-        color: white;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+        """
+        <style>
+        .stApp {
+            background-color: #181646;
+            color: white;
+        }
+        h2, h3 {
+            color: white;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.markdown(''' ## Welcome to the,\n
     ## Music Genre Classification System! 🎶🎧''')
@@ -89,13 +64,8 @@ if(app_mode=="Home"):
     st.image(image_path, use_column_width=True)
     st.markdown("""
 **Our goal is to help in identifying music genres from audio tracks efficiently. Upload an audio file, and our system will analyze it to detect its genre. Discover the power of AI in music analysis!**
-
-
 """)
 
-
-
-#About Project
 elif(app_mode=="About Project"):
     st.markdown("""
                 ### About Project
@@ -111,27 +81,19 @@ elif(app_mode=="About Project"):
                 4. **2 CSV files** - Containing features of the audio files. One file has for each song (30 seconds long) a mean and variance computed over multiple features that can be extracted from an audio file. The other file has the same structure, but the songs were split before into 3 seconds audio files (this way increasing 10 times the amount of data we fuel into our classification models). With data, more is always better.
                 """)
 
-    
-
-#Prediction Page
 elif(app_mode=="Prediction"):
     st.header("Model Prediction")
     test_mp3 = st.file_uploader("Upload an audio file", type=["mp3"])
     if test_mp3 is not None:
-            filepath = 'Test_Music/'+test_mp3.name
-            
+        filepath = 'Test_Music/'+test_mp3.name
 
-    #Show Button
     if(st.button("Play Audio")):
         st.audio(test_mp3)
     
-    #Predict Button
     if(st.button("Predict")):
-      with st.spinner("Please Wait.."):       
-        X_test = load_and_preprocess_data(filepath)
-        result_index = model_prediction(X_test)
-        st.balloons()
-        label = ['blues', 'classical','country','disco','hiphop','jazz','metal','pop','reggae','rock']
-        st.markdown("**:blue[Model Prediction:] It's a  :red[{}] music**".format(label[result_index]))
-
-       
+        with st.spinner("Please Wait.."):       
+            X_test = load_and_preprocess_data(filepath)
+            result_index = model_prediction(X_test)
+            st.balloons()
+            label = ['blues', 'classical','country','disco','hiphop','jazz','metal','pop','reggae','rock']
+            st.markdown("**:blue[Model Prediction:] It's a  :red[{}] music**".format(label[result_index]))
